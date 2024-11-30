@@ -1,10 +1,12 @@
-import NextAuth from "next-auth"
+import NextAuth, { AuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { compare } from "bcrypt"
 import { prisma } from "@/lib/db"
+import { PrismaAdapter } from "@auth/prisma-adapter"
 
-const handler = NextAuth({
+export const authOptions: AuthOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -18,40 +20,59 @@ const handler = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid credentials");
+          throw new Error("Invalid credentials")
         }
 
         const user = await prisma.user.findUnique({
           where: {
             email: credentials.email
           }
-        });
+        })
 
         if (!user || !user.hashedPassword) {
-          throw new Error("Invalid credentials");
+          throw new Error("Invalid credentials")
         }
 
         const isCorrectPassword = await compare(
           credentials.password,
           user.hashedPassword
-        );
+        )
 
         if (!isCorrectPassword) {
-          throw new Error("Invalid credentials");
+          throw new Error("Invalid credentials")
         }
 
-        return user;
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        }
       }
     })
   ],
+  debug: process.env.NODE_ENV === "development",
+  session: {
+    strategy: "jwt"
+  },
+  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/auth/signin',
   },
-  debug: process.env.NODE_ENV === 'development',
-  session: {
-    strategy: "jwt",
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-})
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id
+      }
+      return session
+    }
+  }
+}
 
+const handler = NextAuth(authOptions)
 export { handler as GET, handler as POST }

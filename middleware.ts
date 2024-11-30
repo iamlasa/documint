@@ -4,12 +4,19 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request })
+  const isAuthPage = request.nextUrl.pathname.startsWith('/auth')
 
-  if (!token && !request.nextUrl.pathname.startsWith('/auth')) {
+  if (!token) {
+    // Allow access to auth pages when not logged in
+    if (isAuthPage) {
+      return NextResponse.next()
+    }
+    // Redirect to signin for other pages
     return NextResponse.redirect(new URL('/auth/signin', request.url))
   }
 
-  if (token && request.nextUrl.pathname.startsWith('/auth')) {
+  // Redirect to dashboard if trying to access auth pages while logged in
+  if (isAuthPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 

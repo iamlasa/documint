@@ -1,17 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'  // Add this line
+import Link from 'next/link'
+import { useToast } from '@/components/ui/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useToast } from '@/components/ui/use-toast'
 import { Icons } from '@/components/icons'
-import { Github } from 'lucide-react'
 
-export default function SignIn() {
+export default function SignUpPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
@@ -20,32 +18,40 @@ export default function SignIn() {
     e.preventDefault()
     setIsLoading(true)
 
-    const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
-
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      const formData = new FormData(e.currentTarget)
+      const email = formData.get('email') as string
+      const password = formData.get('password') as string
+      const name = formData.get('name') as string
+
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          name,
+        }),
       })
 
-      if (result?.error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Invalid credentials',
-        })
-        return
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.message || 'Something went wrong')
       }
 
-      router.push('/dashboard')
+      toast({
+        title: 'Account created!',
+        description: 'Please sign in with your new account',
+      })
+
+      router.push('/auth/signin')
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Something went wrong',
+        description: error instanceof Error ? error.message : 'Something went wrong',
       })
     } finally {
       setIsLoading(false)
@@ -56,15 +62,28 @@ export default function SignIn() {
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
         <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Create an account</h1>
           <p className="text-sm text-muted-foreground">
-            Sign in to your account to continue
+            Enter your details below to create your account
           </p>
         </div>
 
         <div className="grid gap-6">
           <form onSubmit={onSubmit}>
             <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  placeholder="John Doe"
+                  type="text"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  disabled={isLoading}
+                  required
+                />
+              </div>
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -85,7 +104,7 @@ export default function SignIn() {
                   id="password"
                   name="password"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   disabled={isLoading}
                   required
                 />
@@ -94,7 +113,7 @@ export default function SignIn() {
                 {isLoading && (
                   <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                 )}
-                Sign In
+                Sign Up
               </Button>
             </div>
           </form>
@@ -104,38 +123,17 @@ export default function SignIn() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
+                Or
               </span>
             </div>
           </div>
-          <Button
-            variant="outline"
-            type="button"
-            disabled={isLoading}
-            onClick={async () => {
-              try {
-                console.log('Clicking Google sign in...')
-                const result = await signIn('google', { callbackUrl: '/dashboard' })
-                console.log('Sign in result:', result)
-              } catch (error) {
-                console.error('Sign in error:', error)
-              }
-            }}
-          >
-            {isLoading ? (
-              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Icons.google className="mr-2 h-4 w-4" />
-            )}{' '}
-            Google
-          </Button>
-          <div className="text-sm text-muted-foreground text-center mt-4">
-            Don't have an account?{' '}
+          <div className="text-sm text-muted-foreground text-center">
+            Already have an account?{' '}
             <Link 
-              href="/auth/signup" 
+              href="/auth/signin" 
               className="underline underline-offset-4 hover:text-primary"
             >
-              Sign up
+              Sign in
             </Link>
           </div>
         </div>
