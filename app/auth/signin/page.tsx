@@ -3,50 +3,61 @@
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'  // Add this line
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useToast } from '@/components/ui/use-toast'
 import { Icons } from '@/components/icons'
-import { Github } from 'lucide-react'
+import { ChevronLeft, Lock } from 'lucide-react'
 
 export default function SignIn() {
   const router = useRouter()
-  const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setIsLoading(true)
-
+    setError('')
+  
     const formData = new FormData(e.currentTarget)
     const email = formData.get('email') as string
     const password = formData.get('password') as string
-
+  
     try {
+      // First, check if the user exists
+      const checkUser = await fetch('/api/auth/check-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+  
+      const { exists } = await checkUser.json()
+  
+      if (!exists) {
+        setError('No account found with this email')
+        setIsLoading(false)
+        return
+      }
+  
+      // If user exists, try to sign in
       const result = await signIn('credentials', {
         email,
         password,
         redirect: false,
       })
-
+  
       if (result?.error) {
-        toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Invalid credentials',
-        })
+        setError('Incorrect password')
+        setIsLoading(false)
         return
       }
-
+  
       router.push('/dashboard')
     } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Something went wrong',
-      })
+      setError('Something went wrong. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -54,9 +65,19 @@ export default function SignIn() {
 
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
+      <div className="absolute top-8 left-8">
+        <Link 
+          href="/" 
+          className="flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
+        >
+          <ChevronLeft className="mr-2 h-4 w-4" />
+          Back to Home
+        </Link>
+      </div>
+
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
         <div className="flex flex-col space-y-2 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Welcome back!</h1>
           <p className="text-sm text-muted-foreground">
             Sign in to your account to continue
           </p>
@@ -81,20 +102,38 @@ export default function SignIn() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  disabled={isLoading}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="current-password"
+                    disabled={isLoading}
+                    required
+                    className={error ? 'pr-10 border-red-500' : 'pr-10'}
+                  />
+                  <Lock 
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 ${
+                      error ? 'text-red-500' : 'text-gray-500'
+                    }`}
+                  />
+                </div>
+                {error && (
+                  <p className="text-sm text-red-500 flex items-center gap-1">
+                    {error}
+                  </p>
+                )}
+                <div className="flex justify-end">
+                  <Link
+                    href="/auth/forgot-password"
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
               </div>
               <Button disabled={isLoading}>
-                {isLoading && (
-                  <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                Sign In
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </div>
           </form>
@@ -104,7 +143,7 @@ export default function SignIn() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
+                Or continue with
               </span>
             </div>
           </div>
@@ -112,28 +151,16 @@ export default function SignIn() {
             variant="outline"
             type="button"
             disabled={isLoading}
-            onClick={async () => {
-              try {
-                console.log('Clicking Google sign in...')
-                const result = await signIn('google', { callbackUrl: '/dashboard' })
-                console.log('Sign in result:', result)
-              } catch (error) {
-                console.error('Sign in error:', error)
-              }
-            }}
+            onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
           >
-            {isLoading ? (
-              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Icons.google className="mr-2 h-4 w-4" />
-            )}{' '}
+            <Icons.google className="mr-2 h-4 w-4" />
             Google
           </Button>
-          <div className="text-sm text-muted-foreground text-center mt-4">
+          <div className="text-sm text-muted-foreground text-center">
             Don't have an account?{' '}
             <Link 
               href="/auth/signup" 
-              className="underline underline-offset-4 hover:text-primary"
+              className="text-primary hover:underline"
             >
               Sign up
             </Link>

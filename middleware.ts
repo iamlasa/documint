@@ -5,6 +5,12 @@ import type { NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request })
   const isAuthPage = request.nextUrl.pathname.startsWith('/auth')
+  const isHomePage = request.nextUrl.pathname === '/'
+
+  // Allow access to home page
+  if (isHomePage) {
+    return NextResponse.next()
+  }
 
   if (!token) {
     // Allow access to auth pages when not logged in

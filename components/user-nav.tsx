@@ -37,7 +37,7 @@ export function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer"
-          onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+          onClick={() => signOut({ callbackUrl: '/' })}
         >
           Log out
         </DropdownMenuItem>
