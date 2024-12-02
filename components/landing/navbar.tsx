@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { PrivacyTerms } from './privacy-terms'
+import { PrivacyTerms } from '@/components/landing/privacy-terms'
 
 export function Navbar({ onDialogChange }: { onDialogChange: (isOpen: boolean) => void }) {
  const [showPrivacyTerms, setShowPrivacyTerms] = useState(false)

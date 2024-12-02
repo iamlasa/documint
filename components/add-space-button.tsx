@@ -16,12 +16,15 @@ import { Plus } from 'lucide-react'
 import { addSpace } from '@/lib/local-storage'
 import { getContentfulClient, getSpace } from '@/lib/contentful'
 import { useToast } from '@/hooks/use-toast'
+import type { Space } from '@/types'
 
 interface AddSpaceButtonProps {
-  onSpaceAdded: () => void
+  onSpaceAdded: (space: Space) => void;
 }
 
 export function AddSpaceButton({ onSpaceAdded }: AddSpaceButtonProps) {
+  // ... rest of your code remains the same
+
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [open, setOpen] = useState(false)
@@ -37,21 +40,32 @@ export function AddSpaceButton({ onSpaceAdded }: AddSpaceButtonProps) {
     try {
       // Verify Contentful credentials
       const client = getContentfulClient(accessToken)
-      const space = await getSpace(client, spaceId)
-
+      const contentfulSpace = await getSpace(client, spaceId)
+    
+      // Create a space object that matches our Space type
+      const newSpace = {
+        id: '',  // Will be set by the server
+        spaceId,
+        name: contentfulSpace.name,
+        accessToken,
+        userId: '',  // Will be set by the server
+        createdAt: new Date(),
+        updatedAt: new Date()
+      } as Space
+    
       // Add to local storage
       addSpace({
-        name: space.name,
+        name: contentfulSpace.name,
         spaceId,
         accessToken,
       })
-
+    
       toast({
         title: 'Success',
         description: 'Space added successfully',
       })
       
-      onSpaceAdded()
+      onSpaceAdded(newSpace)
       setOpen(false)
     } catch (error) {
       toast({

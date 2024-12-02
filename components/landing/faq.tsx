@@ -3,8 +3,13 @@
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export function FAQ({ dialogOpen }: { dialogOpen: boolean }) {
- const faqs = [
+interface FAQProps {
+  id?: string;
+  dialogOpen: boolean;
+}
+
+export function FAQ({ id, dialogOpen }: FAQProps) {
+  const faqs = [
    {
      question: "How secure is Documint?",
      answer: "We use Firebase Authentication to protect user accounts and role-based access control for team collaboration. Your API keys are stored securely and used only for communicating with Contentful."
@@ -40,7 +45,7 @@ export function FAQ({ dialogOpen }: { dialogOpen: boolean }) {
   ]
 
   return (
-    <section id="faq" className={cn(
+    <section id={id} className={cn(
       "scroll-mt-16 py-24 transition-colors duration-200",
       dialogOpen ? "bg-[#F3F3F3]" : "bg-white"
     )}>

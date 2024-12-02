@@ -45,6 +45,8 @@ model User {
   sessions       Session[]
   spaces         Space[]
   teams          TeamMember[]
+  resetToken        String?   @db.String
+  resetTokenExpiry  DateTime?
 }
 
 model Space {

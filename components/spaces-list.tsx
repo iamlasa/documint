@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { AddSpaceButton } from './add-space-button'
 import { SpaceCard } from './space-card'
-import { Space } from '@prisma/client'  // Update this import
+import type { Space } from '@/types'
 
 export function SpacesList() {
   const [spaces, setSpaces] = useState<Space[]>([])
@@ -18,7 +18,6 @@ export function SpacesList() {
         setSpaces(data)
       } catch (error) {
         console.error('Error fetching spaces:', error)
-        // You could add error handling UI here
       } finally {
         setIsLoading(false)
       }
@@ -37,7 +36,7 @@ export function SpacesList() {
         <SpaceCard key={space.id} space={space} />
       ))}
       <AddSpaceButton 
-        onSpaceAdded={(newSpace) => setSpaces([...spaces, newSpace])} 
+        onSpaceAdded={(newSpace: Space) => setSpaces([...spaces, newSpace])} 
       />
     </div>
   )

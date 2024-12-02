@@ -2,11 +2,15 @@ import { useState } from 'react'
 import { Switch } from '@/components/ui/switch'
 import { Check, X } from 'lucide-react'
 
-export function Pricing() {
- const [isYearly, setIsYearly] = useState(false)
+interface PricingProps {
+  id?: string;
+}
 
- return (
-   <section id="pricing" className="scroll-mt-16 py-16 px-4">
+export function Pricing({ id }: PricingProps) {
+  const [isYearly, setIsYearly] = useState(false)
+
+  return (
+    <section id={id} className="scroll-mt-16 py-16 px-4">
      <div className="container mx-auto max-w-6xl">
        <div className="flex justify-center mb-8">
          <div className="bg-gray-100 rounded-3xl p-3.5 flex items-center gap-2">
