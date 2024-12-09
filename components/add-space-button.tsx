@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useSession } from 'next-auth/react'
 import {
   Dialog,
   DialogContent,
@@ -13,9 +14,9 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Plus } from 'lucide-react'
-import { addSpace } from '@/lib/local-storage'
+import { addSpace, getSpaces } from '@/lib/local-storage'
 import { getContentfulClient, getSpace } from '@/lib/contentful'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from "@/hooks/use-toast"
 import type { Space } from '@/types'
 
 interface AddSpaceButtonProps {
@@ -23,8 +24,7 @@ interface AddSpaceButtonProps {
 }
 
 export function AddSpaceButton({ onSpaceAdded }: AddSpaceButtonProps) {
-  // ... rest of your code remains the same
-
+  const { data: session } = useSession()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [open, setOpen] = useState(false)
@@ -33,45 +33,55 @@ export function AddSpaceButton({ onSpaceAdded }: AddSpaceButtonProps) {
     e.preventDefault()
     setIsLoading(true)
 
-    const formData = new FormData(e.currentTarget)
-    const spaceId = formData.get('spaceId') as string
-    const accessToken = formData.get('accessToken') as string
-
     try {
-      // Verify Contentful credentials
+      if (!session?.user?.id) {
+        throw new Error('You must be logged in to add spaces')
+      }
+
+      const formData = new FormData(e.currentTarget)
+      const spaceId = formData.get('spaceId') as string
+      const accessToken = formData.get('accessToken') as string
+
+      // Check for duplicates using user ID
+      const existingSpaces = getSpaces(session.user.id)
+      console.log('Checking for duplicate space:', spaceId)
+      
+      const isDuplicate = existingSpaces.some(space => space.spaceId === spaceId)
+      console.log('Is duplicate?', isDuplicate)
+
+      if (isDuplicate) {
+        console.log('Found duplicate, showing toast...')
+        setIsLoading(false)
+        setOpen(false)
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "This space has already been added!"
+        })
+        return
+      }
+
       const client = getContentfulClient(accessToken)
       const contentfulSpace = await getSpace(client, spaceId)
-    
-      // Create a space object that matches our Space type
-      const newSpace = {
-        id: '',  // Will be set by the server
-        spaceId,
-        name: contentfulSpace.name,
-        accessToken,
-        userId: '',  // Will be set by the server
-        createdAt: new Date(),
-        updatedAt: new Date()
-      } as Space
-    
-      // Add to local storage
-      addSpace({
+      
+      const newSpace = addSpace({
         name: contentfulSpace.name,
         spaceId,
         accessToken,
-      })
-    
-      toast({
-        title: 'Success',
-        description: 'Space added successfully',
-      })
+      }, session.user.id)  // Pass the user ID here
       
       onSpaceAdded(newSpace)
       setOpen(false)
-    } catch (error) {
       toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to add space. Please check your credentials.',
+        title: "Success",
+        description: "Space added successfully!"
+      })
+    } catch (error) {
+      console.error('Error:', error)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to add space"
       })
     } finally {
       setIsLoading(false)
@@ -81,7 +91,7 @@ export function AddSpaceButton({ onSpaceAdded }: AddSpaceButtonProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="h-[240px] w-full">
+        <Button variant="outline" className="h-[140px] w-full">
           <Plus className="mr-2 h-4 w-4" />
           Add Space
         </Button>
@@ -114,7 +124,8 @@ export function AddSpaceButton({ onSpaceAdded }: AddSpaceButtonProps) {
             />
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? 'Adding...' : 'Add Space'}
+            {isLoading && <span className="mr-2 animate-spin">⏳</span>}
+            {isLoading ? 'Adding Space...' : 'Add Space'}
           </Button>
         </form>
       </DialogContent>

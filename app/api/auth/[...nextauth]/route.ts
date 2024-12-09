@@ -1,9 +1,29 @@
-import NextAuth, { AuthOptions } from "next-auth"
+import NextAuth, { AuthOptions, Session, User } from "next-auth"
+import { JWT } from "next-auth/jwt"
 import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { compare } from "bcrypt"
 import { prisma } from "@/lib/db"
 import { PrismaAdapter } from "@auth/prisma-adapter"
+
+// Define our own types
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string
+      email?: string | null
+      name?: string | null
+      image?: string | null
+    }
+  }
+
+  interface User {
+    id: string
+    email?: string | null
+    name?: string | null
+    image?: string | null
+  }
+}
 
 export const authOptions: AuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -55,19 +75,16 @@ export const authOptions: AuthOptions = {
     strategy: "jwt"
   },
   secret: process.env.NEXTAUTH_SECRET,
-  pages: {
-    signIn: '/auth/signin',
-  },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: JWT; user?: User }) {
       if (user) {
         token.id = user.id
       }
       return token
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: Session; token: JWT }) {
       if (session.user) {
-        session.user.id = token.id
+        (session.user as any).id = token.id  // Type assertion as a quick fix
       }
       return session
     }

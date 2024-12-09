@@ -19,6 +19,8 @@ import { getContentfulClient, getSpace, getEnvironment } from '@/lib/contentful'
 import { getSpaces } from '@/lib/local-storage'
 import { useToast } from '@/hooks/use-toast'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { StoredSpace } from '@/lib/local-storage'
+import { useSession } from 'next-auth/react'
 import { 
   Eye, 
   Code, 
@@ -68,9 +70,15 @@ export function ContentPreview({ entry, onClose }: ContentPreviewProps) {
   async function loadVersions() {
     setIsLoadingVersions(true)
     try {
-      const spaces = getSpaces()
+      const { data: session } = useSession()
+      if (!session?.user?.id) return
+
+      const spaces = getSpaces(session.user.id) as StoredSpace[]
       const space = spaces.find(s => s.id === entry.spaceId)
-      if (!space) return
+      if (!space) {
+        console.error("Space not found:", entry.spaceId)
+        return
+      }
 
       const client = getContentfulClient(space.accessToken)
       const spaceClient = await getSpace(client, space.spaceId)
@@ -94,9 +102,16 @@ export function ContentPreview({ entry, onClose }: ContentPreviewProps) {
   async function handleSave() {
     setIsSaving(true)
     try {
-      const spaces = getSpaces()
+      const { data: session } = useSession()
+      if (!session?.user?.id) {
+        throw new Error('User not authenticated')
+      }
+
+      const spaces = getSpaces(session.user.id) as StoredSpace[]
       const space = spaces.find(s => s.id === entry.spaceId)
-      if (!space) throw new Error('Space not found')
+      if (!space) {
+        throw new Error('Space not found')
+      }
 
       const client = getContentfulClient(space.accessToken)
       const spaceClient = await getSpace(client, space.spaceId)
@@ -262,14 +277,10 @@ export function ContentPreview({ entry, onClose }: ContentPreviewProps) {
         </DialogHeader>
         
         <Tabs defaultValue="preview" className="flex-1 h-[calc(100%-4rem)]">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="preview" className="flex items-center gap-2">
               <Eye className="h-4 w-4" />
               Preview
-            </TabsTrigger>
-            <TabsTrigger value="raw" className="flex items-center gap-2">
-              <Code className="h-4 w-4" />
-              Raw
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2">
               <History className="h-4 w-4" />
@@ -318,14 +329,6 @@ export function ContentPreview({ entry, onClose }: ContentPreviewProps) {
                 </div>
               )}
             </div>
-          </TabsContent>
-          
-          <TabsContent value="raw" className="h-[calc(100%-2rem)] mt-4">
-            <ScrollArea className="h-full rounded-lg border bg-muted p-4">
-              <pre className="font-mono text-sm">
-                {entry.content}
-              </pre>
-            </ScrollArea>
           </TabsContent>
 
           <TabsContent value="history" className="h-[calc(100%-2rem)] mt-4">

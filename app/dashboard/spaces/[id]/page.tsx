@@ -4,21 +4,29 @@ import { useEffect, useState } from 'react'
 import { notFound } from 'next/navigation'
 import { getSpaces } from '@/lib/local-storage'
 import { Search } from '@/components/search'
+import { useSession } from 'next-auth/react'
+import type { Space } from '@/types'
 
 export default function SpacePage({ params }: { params: { id: string } }) {
-  const [space, setSpace] = useState<any>(null)
+  const { data: session } = useSession()
+  const [space, setSpace] = useState<Space | null>(null)
 
   useEffect(() => {
-    const spaces = getSpaces()
-    const currentSpace = spaces.find((s) => s.id === params.id)
-    
-    if (!currentSpace) {
-      notFound()
-      return
-    }
+    if (session?.user?.id) {
+      const spaces = getSpaces(session.user.id)
+      const currentSpace = spaces.find((s) => s.id === params.id)
+      
+      console.log('Spaces:', spaces)
+      console.log('Current Space ID:', params.id)
+      
+      if (!currentSpace) {
+        notFound()
+        return
+      }
 
-    setSpace(currentSpace)
-  }, [params.id])
+      setSpace(currentSpace)
+    }
+  }, [params.id, session?.user?.id])
 
   if (!space) {
     return null

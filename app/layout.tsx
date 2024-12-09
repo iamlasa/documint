@@ -1,16 +1,6 @@
 import './globals.css'
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import { ThemeProvider } from '@/components/theme-provider'
-import AuthProvider from '@/components/auth-provider'
-import { Toaster } from "@/components/ui/toaster"
-
-const inter = Inter({ subsets: ['latin'] })
-
-export const metadata: Metadata = {
-  title: 'Documint - Contentful Management Tool',
-  description: 'Manage your Contentful content efficiently',
-}
+import { AuthProvider } from "@/components/providers/session-provider"
+import { Toaster } from "@/components/ui/toaster"  // Make sure this import is correct
 
 export default function RootLayout({
   children,
@@ -20,8 +10,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
-        <Toaster />
+        <AuthProvider>{children}</AuthProvider>
+        <Toaster />  {/* Make sure this is outside AuthProvider */}
       </body>
     </html>
   )

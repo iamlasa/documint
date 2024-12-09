@@ -1,34 +1,26 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { AddSpaceButton } from './add-space-button'
 import { SpaceCard } from './space-card'
+import { getSpaces } from '@/lib/local-storage'
 import type { Space } from '@/types'
 
 export function SpacesList() {
+  const { data: session } = useSession()
   const [spaces, setSpaces] = useState<Space[]>([])
-  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    async function fetchSpaces() {
-      try {
-        const response = await fetch('/api/spaces')
-        if (!response.ok) throw new Error('Failed to fetch spaces')
-        const data = await response.json()
-        setSpaces(data)
-      } catch (error) {
-        console.error('Error fetching spaces:', error)
-      } finally {
-        setIsLoading(false)
-      }
+    if (session?.user?.id) {
+      // Only get spaces for the current user's key
+      const userSpacesKey = `documint_spaces_${session.user.id}`
+      const storedSpaces = getSpaces(session.user.id)
+      console.log("Current user ID:", session.user.id)
+      console.log("Stored spaces:", storedSpaces)
+      setSpaces(storedSpaces)
     }
-
-    fetchSpaces()
-  }, [])
-
-  if (isLoading) {
-    return <div>Loading spaces...</div>
-  }
+  }, [session?.user?.id])
 
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

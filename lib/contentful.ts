@@ -3,31 +3,74 @@ import { createClient } from 'contentful-management'
 export function getContentfulClient(accessToken: string) {
   return createClient({
     accessToken,
+    host: 'api.contentful.com',
+    retryOnError: true,
+    headers: {
+      'Content-Type': 'application/vnd.contentful.management.v1+json'
+    }
   })
 }
 
-export async function getSpace(client: any, spaceId: string) {
-  try {
-    return await client.getSpace(spaceId)
-  } catch (error) {
-    console.error('Error getting space:', error)
-    throw error
-  }
+export interface SearchOptions {
+  query?: string;
+  fields?: string[];
+  boost?: {
+    [field: string]: number;
+  };
+  filters?: {
+    contentType?: string;
+    status?: string;
+    updatedAfter?: Date | null;
+    updatedBefore?: Date | null;
+    tags?: string[];
+  };
+}
+
+export function buildQuery(options: SearchOptions) {
+  if (!options.query) return '';
+  
+  // Simple full-text search
+  return `query=${options.query}`;
 }
 
 export async function getEnvironment(space: any, environmentId = 'master') {
   try {
-    return await space.getEnvironment(environmentId)
+    console.log('Getting environment:', environmentId)
+    const environment = await space.getEnvironment(environmentId)
+    console.log('Environment retrieved successfully')
+    return environment
   } catch (error) {
     console.error('Error getting environment:', error)
     throw error
   }
 }
 
+export async function getSpace(client: any, spaceId: string) {
+  try {
+    console.log('Attempting to get space:', spaceId)
+    const space = await client.getSpace(spaceId)
+    console.log('Space retrieved successfully:', space.name)
+    return space
+  } catch (error: any) {
+    console.error('Detailed error getting space:', {
+      status: error?.response?.status,
+      message: error?.message,
+      details: error?.details
+    })
+    
+    if (error?.response?.status === 404) {
+      throw new Error('Space not found. Please check your Space ID.')
+    } else if (error?.response?.status === 401) {
+      throw new Error('Invalid access token. Please check your credentials.')
+    }
+    throw error
+  }
+}
+
 export async function getContentTypes(environment: any) {
   try {
-    const response = await environment.getContentTypes({ limit: 1000 })
-    return response.items.map(type => ({
+    const response = await environment.getContentTypes()
+    return response.items.map((type: any) => ({
       id: type.sys.id,
       name: type.name,
       description: type.description,
@@ -41,26 +84,31 @@ export async function getContentTypes(environment: any) {
 }
 
 export async function getEntries(environment: any, options: { 
-  query?: string
-  contentType?: string
-  limit?: number
-  skip?: number
-  status?: string
-  order?: string
+  query?: string;
+  contentType?: string;
+  limit?: number;
+  skip?: number;
+  status?: string;
+  order?: string;
+  searchOptions?: SearchOptions;
 } = {}) {
   const searchParams: any = {
     limit: options.limit || 25,
     skip: options.skip || 0,
     order: options.order || '-sys.updatedAt',
-  }
+  };
   
-  if (options.query) {
-    searchParams['query'] = options.query
-    console.log('Search parameters:', searchParams)
+  if (options.searchOptions) {
+    const query = buildQuery(options.searchOptions);
+    if (query) {
+      searchParams['query'] = query;
+    }
+  } else if (options.query) {
+    searchParams.query = options.query;
   }
 
   if (options.contentType) {
-    searchParams.content_type = options.contentType
+    searchParams.content_type = options.contentType;
   }
 
   async function executeQuery() {
@@ -70,9 +118,12 @@ export async function getEntries(environment: any, options: {
 
     while (retryCount < maxRetries) {
       try {
-        return await environment.getEntries(searchParams)
+        console.log('Making Contentful API request with params:', JSON.stringify(searchParams, null, 2));
+        const response = await environment.getEntries(searchParams);
+        console.log('Raw Contentful response:', JSON.stringify(response, null, 2));
+        return response;
       } catch (error: any) {
-        console.log('Request error:', error)
+        console.error('Detailed error:', error);
         
         if (error?.sys?.id === 'RateLimitExceeded' && retryCount < maxRetries - 1) {
           retryCount++
