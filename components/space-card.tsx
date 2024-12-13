@@ -2,63 +2,51 @@
 
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
-import { type Space } from '@/types'  // Update this import
-import { ArrowRight, Box, Clock, Users } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { type Space } from '@/types'
+import { Box, Clock } from 'lucide-react'
 
 interface SpaceCardProps {
- space: Space
+  space: Space
 }
 
 export function SpaceCard({ space }: SpaceCardProps) {
- console.log('Space data:', space)
- console.log('Generated URL:', `/dashboard/spaces/${space.id}`)
- console.log('Full space data:', JSON.stringify(space, null, 2))
- 
- return (
-   <Link href={`/dashboard/spaces/${space.id}`}>
-     <Card className="card-modern group">
-       <div className="flex items-start justify-between">
-         <div className="space-y-4">
-           <div className="flex items-center space-x-4">
-             <div className="relative">
-               <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 p-3 transition-transform duration-300 group-hover:scale-110">
-                 <Box className="h-6 w-6 text-primary animate-float" />
-               </div>
-               <div className="absolute -bottom-1 -right-1">
-                 <Badge variant="secondary" className="h-5 w-5 rounded-full p-0 flex items-center justify-center">
-                   <Users className="h-3 w-3" />
-                 </Badge>
-               </div>
-             </div>
-             <div>
-               <h3 className="text-xl font-semibold tracking-tight gradient-text">
-                 {space.name}
-               </h3>
-               <p className="text-sm text-muted-foreground">
-                 Space ID: {space.spaceId}
-               </p>
-             </div>
-           </div>
+  return (
+    <Link href={`/dashboard/spaces/${space.id}`}>
+      <Card className="group relative overflow-hidden border bg-white p-6 transition-all hover:border-primary/20 shadow-none !shadow-none">
+        <div className="flex items-start justify-between">
+          <div className="space-y-4">
+            {/* Icon + Title Section */}
+            <div className="flex items-center gap-4">
+              <div>
+                <h3 className="font-medium text-[#0F1729]">
+                  {space.name}
+                </h3>
+                <p className="text-sm text-[#6B7280]">
+                  Space ID: {space.spaceId}
+                </p>
+              </div>
+            </div>
 
-           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-             <Clock className="h-4 w-4" />
-             <span>Last accessed: {new Date().toLocaleDateString()}</span>
-           </div>
-         </div>
+            {/* Last Accessed Section */}
+            <div className="flex items-center gap-2 text-sm text-[#6B7280]">
+              <Clock className="h-4 w-4" />
+              <span>Last accessed: {new Date().toLocaleDateString()}</span>
+            </div>
+          </div>
+        </div>
 
-         <ArrowRight className="h-5 w-5 transform text-primary transition-all duration-300 group-hover:translate-x-1 opacity-0 group-hover:opacity-100" />
-       </div>
-
-       <div className="mt-4 flex items-center space-x-2">
-         <Badge variant="outline" className="rounded-lg">
-           12 Content Types
-         </Badge>
-         <Badge variant="outline" className="rounded-lg">
-           156 Entries
-         </Badge>
-       </div>
-     </Card>
-   </Link>
- )
+        {/* Stats Section */}
+        <div className="mt-4 flex gap-3">
+          <div className="flex items-center gap-2 rounded-full bg-[#F1F5F9] px-3 py-1 text-sm">
+            <span className="text-[#6B7280]">12</span>
+            <span className="text-[#0F1729]">Content Types</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-full bg-[#F1F5F9] px-3 py-1 text-sm">
+            <span className="text-[#6B7280]">156</span>
+            <span className="text-[#0F1729]">Entries</span>
+          </div>
+        </div>
+      </Card>
+    </Link>
+  )
 }

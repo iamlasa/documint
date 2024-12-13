@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useSession } from 'next-auth/react'
+import { Card } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -91,10 +92,21 @@ export function AddSpaceButton({ onSpaceAdded }: AddSpaceButtonProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="h-[140px] w-full">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Space
-        </Button>
+        <div>
+          <Card className="group h-full relative overflow-hidden border border-dashed bg-white p-6 transition-all hover:border-primary/20 hover:shadow-lg cursor-pointer">
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#F1F5F9]">
+                  <Plus className="h-6 w-6 text-[#0F1729]" />
+                </div>
+                <h3 className="font-medium text-[#0F1729]">Add Space</h3>
+                <p className="mt-1 text-sm text-[#6B7280]">
+                  Connect a Contentful space
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -123,9 +135,22 @@ export function AddSpaceButton({ onSpaceAdded }: AddSpaceButtonProps) {
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading && <span className="mr-2 animate-spin">⏳</span>}
-            {isLoading ? 'Adding Space...' : 'Add Space'}
+          <Button 
+            type="submit" 
+            className="w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <svg className="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Adding Space...
+              </>
+            ) : (
+              'Add Space'
+            )}
           </Button>
         </form>
       </DialogContent>

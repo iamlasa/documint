@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useState, useEffect } from "react"; // Add this line
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ButtonProps, buttonVariants } from "@/components/ui/button";
@@ -16,6 +17,21 @@ export function Pagination({
   className,
   ...props
 }: PaginationProps) {
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [localCurrentPage, setLocalCurrentPage] = useState(currentPage);
+
+  // Update local state when prop changes
+  useEffect(() => {
+    setLocalCurrentPage(currentPage);
+    setIsNavigating(false);
+  }, [currentPage]);
+
+  const handlePageChange = async (page: number) => {
+    setIsNavigating(true);
+    setLocalCurrentPage(page);
+    onPageChange(page);
+  };
+
   const generatePages = () => {
     const pages: (number | string)[] = [];
     const maxVisible = 5;
@@ -26,18 +42,18 @@ export function Pagination({
 
     pages.push(1);
     
-    if (currentPage > 3) {
+    if (localCurrentPage > 3) {
       pages.push('...');
     }
 
-    const start = Math.max(2, currentPage - 1);
-    const end = Math.min(totalPages - 1, currentPage + 1);
+    const start = Math.max(2, localCurrentPage - 1);
+    const end = Math.min(totalPages - 1, localCurrentPage + 1);
 
     for (let i = start; i <= end; i++) {
       pages.push(i);
     }
 
-    if (currentPage < totalPages - 2) {
+    if (localCurrentPage < totalPages - 2) {
       pages.push('...');
     }
 
@@ -54,30 +70,38 @@ export function Pagination({
       {...props}
     >
       <button
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage <= 1}
-        className={buttonVariants({
-          variant: "outline",
-          size: "icon",
-          className: "h-8 w-8",
-        })}
+        onClick={() => handlePageChange(localCurrentPage - 1)}
+        disabled={localCurrentPage <= 1 || isNavigating}
+        className={cn(
+          buttonVariants({
+            variant: "ghost",
+            size: "icon",
+          }),
+          "h-8 w-8 border-none hover:bg-gray-100"
+        )}
       >
         <ChevronLeft className="h-4 w-4" />
       </button>
       {generatePages().map((page, i) => (
         <React.Fragment key={i}>
           {typeof page === "string" ? (
-            <div className="flex h-8 w-8 items-center justify-center">
+            <div className="flex h-8 w-8 items-center justify-center text-gray-500">
               <MoreHorizontal className="h-4 w-4" />
             </div>
           ) : (
             <button
-              onClick={() => onPageChange(page)}
-              className={buttonVariants({
-                variant: currentPage === page ? "default" : "outline",
-                size: "icon",
-                className: "h-8 w-8",
-              })}
+              onClick={() => handlePageChange(page)}
+              disabled={isNavigating}
+              className={cn(
+                buttonVariants({
+                  variant: "ghost",
+                  size: "icon",
+                }),
+                "h-8 w-8 border-none transition-colors duration-200",
+                localCurrentPage === page 
+                  ? "bg-gray-100 text-gray-900" 
+                  : "text-gray-500 hover:bg-gray-50"
+              )}
             >
               {page}
             </button>
@@ -85,13 +109,15 @@ export function Pagination({
         </React.Fragment>
       ))}
       <button
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage >= totalPages}
-        className={buttonVariants({
-          variant: "outline",
-          size: "icon",
-          className: "h-8 w-8",
-        })}
+        onClick={() => handlePageChange(localCurrentPage + 1)}
+        disabled={localCurrentPage >= totalPages || isNavigating}
+        className={cn(
+          buttonVariants({
+            variant: "ghost",
+            size: "icon",
+          }),
+          "h-8 w-8 border-none hover:bg-gray-100"
+        )}
       >
         <ChevronRight className="h-4 w-4" />
       </button>

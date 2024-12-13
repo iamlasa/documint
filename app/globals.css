@@ -58,23 +58,30 @@
   }
 }
 
-.gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700;
-}
+@layer components {
+  .documint-card {
+    @apply shadow-none !important;
+    box-shadow: none !important;
+  }
+  
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700;
+  }
 
-.hero-gradient {
-  background: radial-gradient(circle at top center, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
-}
+  .hero-gradient {
+    background: radial-gradient(circle at top center, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+  }
 
-.feature-card {
-  @apply relative overflow-hidden rounded-2xl border bg-card p-8 transition-all hover:shadow-lg;
-}
+  .feature-card {
+    @apply relative overflow-hidden rounded-2xl border bg-card p-8 transition-all;
+  }
 
-.feature-card::before {
-  content: '';
-  @apply absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 transition-opacity;
-}
+  .feature-card::before {
+    content: '';
+    @apply absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 transition-opacity;
+  }
 
-.feature-card:hover::before {
-  @apply opacity-100;
+  .feature-card:hover::before {
+    @apply opacity-100;
+  }
 }

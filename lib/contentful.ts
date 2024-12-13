@@ -27,10 +27,37 @@ export interface SearchOptions {
 }
 
 export function buildQuery(options: SearchOptions) {
-  if (!options.query) return '';
-  
-  // Simple full-text search
-  return `query=${options.query}`;
+  const queryParts = [];
+
+  // Add full-text search if query exists
+  if (options.query) {
+    // Basic full-text search across all fields
+    queryParts.push(`query=${encodeURIComponent(options.query)}`);
+  }
+
+  // Handle content type differently
+  if (options.filters?.contentType && options.filters.contentType !== 'all') {
+    queryParts.push(`content_type=${options.filters.contentType}`);
+  }
+
+  // Add status filter
+  if (options.filters?.status === 'published') {
+    queryParts.push('sys.publishedAt[exists]=true');
+  } else if (options.filters?.status === 'draft') {
+    queryParts.push('sys.publishedAt[exists]=false');
+  }
+
+  // Add date range filters
+  if (options.filters?.updatedAfter) {
+    queryParts.push(`sys.updatedAt[gte]=${options.filters.updatedAfter.toISOString()}`);
+  }
+  if (options.filters?.updatedBefore) {
+    queryParts.push(`sys.updatedAt[lte]=${options.filters.updatedBefore.toISOString()}`);
+  }
+
+  console.log('Final query parts:', queryParts); // Debug log
+
+  return queryParts.join('&');
 }
 
 export async function getEnvironment(space: any, environmentId = 'master') {
@@ -101,7 +128,13 @@ export async function getEntries(environment: any, options: {
   if (options.searchOptions) {
     const query = buildQuery(options.searchOptions);
     if (query) {
-      searchParams['query'] = query;
+      // Merge the query parameters into searchParams
+      const queryParams = query.split('&').reduce((acc: any, param) => {
+        const [key, value] = param.split('=');
+        acc[key] = value;
+        return acc;
+      }, {});
+      Object.assign(searchParams, queryParams);
     }
   } else if (options.query) {
     searchParams.query = options.query;

@@ -23,13 +23,13 @@ export function SpacesList() {
   }, [session?.user?.id])
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-      {spaces.map((space) => (
-        <SpaceCard key={space.id} space={space} />
-      ))}
-      <AddSpaceButton 
-        onSpaceAdded={(newSpace: Space) => setSpaces([...spaces, newSpace])} 
-      />
-    </div>
+    <div className="grid gap-8 md:grid-cols-2">
+    {spaces.map((space) => (
+      <SpaceCard key={space.id} space={space} />
+    ))}
+    <AddSpaceButton 
+      onSpaceAdded={(newSpace: Space) => setSpaces([...spaces, newSpace])} 
+    />
+  </div>
   )
 }

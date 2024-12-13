@@ -35,6 +35,7 @@ import { getSpaces } from '@/lib/local-storage'
 import { ContentPreview } from './content-preview'
 import { ContentTypeFilter } from './content-type-filter'
 import { Pagination } from '@/components/ui/pagination'
+import { cn } from "@/lib/utils";
 
 interface ContentfulEntry {
   id: string
@@ -84,12 +85,23 @@ export function Search({ spaceId, showGlobalSearch = false }: SearchProps) {
   })
 
   const handlePageChange = (page: number) => {
-    setPagination(prev => ({ ...prev, currentPage: page }))
+    setIsLoading(true);
+    setPagination(prev => ({ 
+      ...prev, 
+      currentPage: page,
+      totalItems: 0  // Reset total items
+    }));
+    handleSearch();  // Re-trigger the search with new page
   }
 
   const formatDate = (date: Date | null) => {
     if (!date) return 'Select date'
     return date.toLocaleDateString()
+  }
+  function highlightSearchTerm(text: string, searchTerm: string) {
+    if (!searchTerm.trim() || !text) return text;
+    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    return text.replace(regex, '<mark class="bg-[#D3FE1A] px-1 rounded-sm">$1</mark>');
   }
 
   const debouncedSearch = useCallback(
@@ -219,7 +231,7 @@ export function Search({ spaceId, showGlobalSearch = false }: SearchProps) {
                 className="pl-9 h-11"
               />
             </div>
-            <Button type="submit" className="h-11" disabled={isLoading}>
+            <Button type="submit" className="h-11 bg-[#F3F3F3] text-black hover:bg-[#6B7280]/90" disabled={isLoading}>
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -356,74 +368,88 @@ export function Search({ spaceId, showGlobalSearch = false }: SearchProps) {
         </div>
       </div>
       <ScrollArea className="h-[calc(100vh-16rem)]">
-        <div className="space-y-4">
-          {results.map((entry) => (
-            <Card
-              key={entry.id}
-              className="group relative overflow-hidden transition-all hover:shadow-md cursor-pointer"
-              onClick={() => setSelectedEntry(entry)}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-              <div className="relative p-6">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold truncate">{entry.title}</h3>
-                    {isGlobalSearch && (
-                      <p className="text-sm text-muted-foreground">
-                        {entry.spaceName}
-                      </p>
-                    )}
-                    <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                      {entry.content}
-                    </p>
-                  </div>
-                  <Badge 
-                    variant="outline"
-                    className="shrink-0 capitalize"
-                  >
-                    {entry.contentType}
-                  </Badge>
-                </div>
-                <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>Updated {new Date(entry.lastUpdated).toLocaleDateString()}</span>
-                  <span>•</span>
-                  <Badge variant={entry.status === 'published' ? 'default' : 'secondary'}>
-                    {entry.status}
-                  </Badge>
-                </div>
+  <div className="relative">
+    <div className={cn(
+      "space-y-4 transition-opacity duration-200",
+      isLoading ? "opacity-50" : "opacity-100"
+    )}>
+      {results.map((entry) => (
+        <Card
+        key={entry.id}
+        className="group relative overflow-hidden transition-all cursor-pointer bg-[#F5F5F5] hover:bg-[#EFEFEF] border-0"
+        onClick={() => setSelectedEntry(entry)}
+      >
+          <div className="relative p-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h3 
+                  className="font-semibold truncate"
+                  dangerouslySetInnerHTML={{ 
+                    __html: highlightSearchTerm(entry.title, searchTerm)
+                  }}
+                />
+                {isGlobalSearch && (
+                  <p className="text-sm text-muted-foreground">
+                    {entry.spaceName}
+                  </p>
+                )}
+                <p 
+                  className="mt-1 text-sm text-muted-foreground line-clamp-2"
+                  dangerouslySetInnerHTML={{ 
+                    __html: highlightSearchTerm(entry.content, searchTerm)
+                  }}
+                />
               </div>
-            </Card>
-          ))}
+              <Badge 
+                variant="outline"
+                className="shrink-0 capitalize"
+              >
+                {entry.contentType}
+              </Badge>
+            </div>
+            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+              <span>Updated {new Date(entry.lastUpdated).toLocaleDateString()}</span>
+              <span>•</span>
+              <Badge variant={entry.status === 'published' ? 'default' : 'secondary'}>
+                {entry.status}
+              </Badge>
+            </div>
+          </div>
+        </Card>
+      ))}
 
-          {results.length === 0 && !isLoading && (
-            <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-4">
-                <Filter className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <p className="text-lg font-medium">No results found</p>
-              <p className="text-muted-foreground mt-1">
-                {searchTerm ? 'Try adjusting your search or filters' : 'Enter a search term to find content'}
-              </p>
-            </div>
-          )}
-
-          {isLoading && (
-            <div className="text-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-              <p className="text-muted-foreground mt-4">Searching content...</p>
-            </div>
-          )}
-          {results.length > 0 && (
-            <div className="mt-6">
-              <Pagination
-                currentPage={pagination.currentPage}
-                totalPages={pagination.totalPages}
-                onPageChange={handlePageChange}
-              />
-            </div>
-          )}
+      {results.length === 0 && !isLoading && (
+        <div className="text-center py-12">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-4">
+            <Filter className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <p className="text-lg font-medium">No results found</p>
+          <p className="text-muted-foreground mt-1">
+            {searchTerm ? 'Try adjusting your search or filters' : 'Enter a search term to find content'}
+          </p>
         </div>
-      </ScrollArea>
+      )}
+    </div>
+
+    {isLoading && (
+      <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+        </div>
+      </div>
+    )}
+
+    {results.length > 0 && (
+      <div className="mt-6">
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          onPageChange={handlePageChange}
+        />
+      </div>
+    )}
+  </div>
+</ScrollArea>
 
       {selectedEntry && (
         <ContentPreview

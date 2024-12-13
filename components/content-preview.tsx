@@ -54,50 +54,12 @@ interface ContentPreviewProps {
 }
 
 export function ContentPreview({ entry, onClose }: ContentPreviewProps) {
+  const { data: session } = useSession()
   const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState(entry.content)
-  const [versions, setVersions] = useState<Version[]>([])
-  const [selectedVersion, setSelectedVersion] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [viewMode, setViewMode] = useState<'single' | 'split'>('single')
-  const [isLoadingVersions, setIsLoadingVersions] = useState(false)
-
-  useEffect(() => {
-    loadVersions()
-  }, [])
-
-  async function loadVersions() {
-    setIsLoadingVersions(true)
-    try {
-      const { data: session } = useSession()
-      if (!session?.user?.id) return
-
-      const spaces = getSpaces(session.user.id) as StoredSpace[]
-      const space = spaces.find(s => s.id === entry.spaceId)
-      if (!space) {
-        console.error("Space not found:", entry.spaceId)
-        return
-      }
-
-      const client = getContentfulClient(space.accessToken)
-      const spaceClient = await getSpace(client, space.spaceId)
-      const environment = await getEnvironment(spaceClient)
-      const contentfulEntry = await environment.getEntry(entry.id)
-      
-      const versionsResponse = await contentfulEntry.getVersions()
-      setVersions(versionsResponse.items)
-    } catch (error) {
-      console.error('Error loading versions:', error)
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load version history'
-      })
-    } finally {
-      setIsLoadingVersions(false)
-    }
-  }
 
   async function handleSave() {
     setIsSaving(true)
@@ -136,7 +98,6 @@ export function ContentPreview({ entry, onClose }: ContentPreviewProps) {
       })
 
       setIsEditing(false)
-      await loadVersions()
     } catch (error) {
       console.error('Save error:', error)
       toast({
@@ -147,27 +108,6 @@ export function ContentPreview({ entry, onClose }: ContentPreviewProps) {
     } finally {
       setIsSaving(false)
     }
-  }
-
-  function renderDiff(oldText: string, newText: string) {
-    const diff = diffChars(oldText, newText)
-    
-    return (
-      <pre className="whitespace-pre-wrap font-mono text-sm">
-        {diff.map((part, i) => (
-          <span
-            key={i}
-            className={
-              part.added ? 'bg-green-500/20' :
-              part.removed ? 'bg-red-500/20' :
-              ''
-            }
-          >
-            {part.value}
-          </span>
-        ))}
-      </pre>
-    )
   }
 
   function renderContent(content: string) {
@@ -213,13 +153,17 @@ export function ContentPreview({ entry, onClose }: ContentPreviewProps) {
   }
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl h-[90vh]">
-        <DialogHeader className="flex flex-row items-center justify-between">
-          <div className="flex-1">
-            <DialogTitle className="flex items-center gap-2 text-xl">
+<Dialog open={true} onOpenChange={onClose}>
+  <div className="fixed inset-0 bg-gray-100/70 backdrop-blur-sm" />
+  <DialogContent className="max-w-4xl h-[30vh] bg-white rounded-2xl border shadow-sm" aria-describedby="dialog-description">
+  <div className="flex flex-col h-full">
+      {/* Header Section */}
+      <div className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+          <DialogTitle className="flex items-center gap-2 text-2xl font-medium">
               {entry.title}
-              <Badge variant={entry.status === 'published' ? 'default' : 'secondary'}>
+              <Badge variant={entry.status === 'published' ? 'default' : 'secondary'} className="font-normal">
                 {entry.status}
               </Badge>
             </DialogTitle>
@@ -265,125 +209,28 @@ export function ContentPreview({ entry, onClose }: ContentPreviewProps) {
                 Edit
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
-        </DialogHeader>
-        
-        <Tabs defaultValue="preview" className="flex-1 h-[calc(100%-4rem)]">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="preview" className="flex items-center gap-2">
-              <Eye className="h-4 w-4" />
-              Preview
-            </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-2">
-              <History className="h-4 w-4" />
-              History
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="preview" className="h-[calc(100%-2rem)] mt-4">
-            <div className="h-full">
-              {viewMode === 'split' ? (
-                <div className="grid grid-cols-2 gap-4 h-full">
-                  <div className="rounded-lg border bg-muted/50 p-4">
-                    <ScrollArea className="h-full">
-                      {isEditing ? (
-                        <Textarea
-                          value={editedContent}
-                          onChange={(e) => setEditedContent(e.target.value)}
-                          className="min-h-[500px] font-mono"
-                        />
-                      ) : (
-                        <pre className="whitespace-pre-wrap">
-                          {entry.content}
-                        </pre>
-                      )}
-                    </ScrollArea>
-                  </div>
-                  <div className="rounded-lg border bg-muted/50 p-4">
-                    <ScrollArea className="h-full">
-                      {renderContent(isEditing ? editedContent : entry.content)}
-                    </ScrollArea>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-lg border bg-muted/50 p-4 h-full">
-                  <ScrollArea className="h-full">
-                    {isEditing ? (
-                      <Textarea
-                        value={editedContent}
-                        onChange={(e) => setEditedContent(e.target.value)}
-                        className="min-h-[500px] font-mono"
-                      />
-                    ) : (
-                      renderContent(entry.content)
-                    )}
-                  </ScrollArea>
-                </div>
-              )}
-            </div>
-          </TabsContent>
+        </div>
+      </div>
 
-          <TabsContent value="history" className="h-[calc(100%-2rem)] mt-4">
-            {isLoadingVersions ? (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Loading version history...
-              </div>
+      {/* Content Section */}
+      <div className="flex-1 mt-2">
+      <div className="h-full rounded-xl bg-[#F8FAFC] p-4">
+          <ScrollArea className="h-full">
+            {isEditing ? (
+              <Textarea
+                value={editedContent}
+                onChange={(e) => setEditedContent(e.target.value)}
+                className="min-h-[300px] font-mono"
+              />
             ) : (
-              <div className="grid grid-cols-2 gap-4 h-full">
-                <div className="space-y-2">
-                  <h3 className="font-medium">Versions</h3>
-                  <ScrollArea className="h-[calc(100%-2rem)] border rounded-lg">
-                    <div className="p-4 space-y-2">
-                      {versions.map((version) => (
-                        <Button
-                          key={version.sys.id}
-                          variant={selectedVersion === version.sys.id ? 'default' : 'outline'}
-                          className="w-full justify-start"
-                          onClick={() => setSelectedVersion(version.sys.id)}
-                        >
-                          <div className="truncate">
-                            <div className="font-medium">
-                              Version {version.sys.id}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {new Date(version.sys.createdAt).toLocaleString()}
-                            </div>
-                          </div>
-                        </Button>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-                
-                <div className="space-y-2">
-                  <h3 className="font-medium">Changes</h3>
-                  <ScrollArea className="h-[calc(100%-2rem)] border rounded-lg p-4">
-                    {selectedVersion ? (
-                      renderDiff(
-                        versions.find(v => v.sys.id === selectedVersion)?.fields?.content?.['en-US'] || '',
-                        entry.content
-                      )
-                    ) : (
-                      <div className="text-muted-foreground">
-                        Select a version to compare
-                      </div>
-                    )}
-                  </ScrollArea>
-                </div>
-              </div>
+              renderContent(entry.content)
             )}
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+          </ScrollArea>
+        </div>
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
   )
 }
